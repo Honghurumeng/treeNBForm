@@ -1,0 +1,14 @@
+.input {
+    position: relative;
+    display: inline-block;
+    width: 194px;
+    height: 31px;
+    font-size: 14px;
+    color: #333;
+    background-color: #fff;
+    border: 1px solid #333;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.3s;
+    margin-right: 20px;
+}
