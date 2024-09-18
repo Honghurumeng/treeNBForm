@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import './select_tree.css';
 import Select from './select';
 import Input from './input';
@@ -6,7 +7,12 @@ import Line from './line';
 import PropTypes from 'prop-types';
 
 function SelectTree({ treeInfo }) {
-    const [info, setInfo] = useState(treeInfo);
+    // 为每一行添加唯一的 id
+    const initializeTreeInfo = (treeInfo) => {
+        return treeInfo.map(row => ({ id: uuidv4(), data: row }));
+    };
+
+    const [info, setInfo] = useState(initializeTreeInfo(treeInfo));
     const [lines, setLines] = useState([]);
     const tableRef = useRef(null);
 
@@ -15,19 +21,20 @@ function SelectTree({ treeInfo }) {
             alert('Cannot delete the last row');
             return;
         }
-        const newInfo = info.filter((_, index) => index !== rowIndex);
-        setInfo(newInfo);
+        setInfo((prevInfo) => prevInfo.filter((_, index) => index !== rowIndex));
     };
 
     const copyRow = (rowIndex, colIndex) => {
         const newInfo = [...info];
         let insertIndex = rowIndex + 1;
-        while (newInfo[insertIndex] && newInfo[insertIndex][colIndex] === 0) {
+        while (newInfo[insertIndex] && newInfo[insertIndex].data[colIndex] === 0) {
             insertIndex++;
         }
 
-        newInfo.splice(insertIndex, 0, [...newInfo[rowIndex]]);
-        newInfo[insertIndex].splice(0, colIndex, ...newInfo[rowIndex].slice(0, colIndex).fill(0));
+        const newRow = { id: uuidv4(), data: [...newInfo[rowIndex].data] };
+        newRow.data.splice(0, colIndex, ...newInfo[rowIndex].data.slice(0, colIndex).fill(0));
+
+        newInfo.splice(insertIndex, 0, newRow);
 
         setInfo(newInfo);
     };
@@ -51,22 +58,19 @@ function SelectTree({ treeInfo }) {
                 const cell = cells[i];
                 const rowIndex = parseInt(cell.getAttribute('data-row'), 10);
                 const colIndex = parseInt(cell.getAttribute('data-col'), 10);
-                // console.log(cell, rowIndex, colIndex);
                 const select = cell.querySelector('select');
                 const input = cell.querySelector('input');
 
-                // 如果当前列是新行的起始列且值为0，找到不为0的列
-                if (colIndex === 0 && info[rowIndex][colIndex] === 0) {
-                    for (let j = 1; j < info[rowIndex].length; j++) {
-                        if (info[rowIndex][j] !== 0) {
+                if (colIndex === 0 && info[rowIndex].data[colIndex] === 0) {
+                    for (let j = 1; j < info[rowIndex].data.length; j++) {
+                        if (info[rowIndex].data[j] !== 0) {
                             const targetCell = table.querySelector(`td[data-row="${rowIndex}"][data-col="${j}"]`);
                             if (targetCell) {
                                 const targetPos = getRelativePosition(targetCell, table);
                                 let roundBS = 1;
 
-                                // 检查上一行同一列的值是否为0
                                 for (let k = rowIndex - 1; k >= 0; k--) {
-                                    if (info[k][j] === 0) {
+                                    if (info[k].data[j] === 0) {
                                         roundBS++;
                                     } else {
                                         break;
@@ -85,7 +89,7 @@ function SelectTree({ treeInfo }) {
                     }
                 }
 
-                if (colIndex < info[rowIndex].length - 2) {
+                if (colIndex < info[rowIndex].data.length - 2) {
                     if (select) {
                         const selectPos = getRelativePosition(select, table);
                         newLines.push({
@@ -118,9 +122,9 @@ function SelectTree({ treeInfo }) {
             <table ref={tableRef}>
                 <tbody>
                     {info.map((row, i) => (
-                        <tr key={i}>
-                            {row.map((col, j) => (
-                                <td key={j} data-row={i} data-col={j}>
+                        <tr key={row.id}>
+                            {row.data.map((col, j) => (
+                                <td key={`${row.id}-${j}`} data-row={i} data-col={j}>
                                     {col === 1 && <Select showAddCopy pos={{ i, j }} copyRow={copyRow} />}
                                     {col === 2 && <Input />}
                                     {col === 3 && (
